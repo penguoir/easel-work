@@ -3,6 +3,7 @@ import useAssignments from '../lib/useAssignments'
 import Assignment from '../lib/Assignment'
 import { ArchiveIcon, CheckIcon, FoldDownIcon, FoldUpIcon, ArrowUpIcon, XIcon } from '@primer/octicons-react'
 import { db } from '../lib/firebase'
+import Head from 'next/head'
 
 function Index() {
   const assignments = useAssignments()
@@ -36,6 +37,10 @@ function Index() {
 
   return (
     <>
+      <Head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </Head>
+
       <div className="container my-5">
         {Object.keys(assignments).filter(x => !assignments[x].deleted).length === 0
           && <div className="alert alert-info">No incomplete assignments found</div>}
