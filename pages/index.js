@@ -1,27 +1,84 @@
-import moment from 'moment'
 import fetch from 'isomorphic-unfetch'
-import useAssignments from '../lib/useAssignment'
+import useAssignments from '../lib/useAssignments'
+import Assignment from '../lib/Assignment'
+import { ArchiveIcon, CheckIcon, FoldDownIcon, FoldUpIcon, ArrowUpIcon, XIcon } from '@primer/octicons-react'
+import { db } from '../lib/firebase'
 
 function Index() {
-  const courses = useAssignments()
-  const full_courses = courses.filter(x => x.assignmentsConnection.edges.length > 0)
+  const assignments = useAssignments()
+  const [showDeleted, setShowDeleted] = React.useState(false)
+
+  if (!assignments) {
+    return 'Loading...'
+  }
+
+  const mark = (id, mark) => {
+    const ref = db.collection('assignments').doc(id)
+    const merge = { merge: true }
+
+    switch (mark) {
+      case 'done':
+        ref.set({ done: true }, merge)
+        break
+      case 'not_done':
+        ref.set({ done: false }, merge)
+        break
+      case 'deleted':
+        ref.set({ deleted: true }, merge)
+        break
+      case 'not_deleted':
+        ref.set({ deleted: false }, merge)
+        break
+      default:
+        throw Error('Not implemented')
+    }
+  }
 
   return (
     <>
       <div className="container my-5">
-        {full_courses.map(x => 
-          <div className="mb-4">
-            <h2 className="h6 font-weight-bold">{x.name}</h2>
-            <div className="list-group">
-              {x.assignmentsConnection.edges.map(ass =>
-                <div key={ass.id} className="list-group-item">
-                  <div>{ass.node.name}</div>
-                  <div className="font-italic">{moment(ass.node.dueAt).fromNow()}</div>
-                </div>
-              )}
-            </div>
+        {Object.keys(assignments).filter(x => !assignments[x].deleted).length === 0
+          && <div className="alert alert-info">No incomplete assignments found</div>}
+
+        <div className="card">
+          <div className="card-header">
+            Assignments
           </div>
-        )}
+          <div className="list-group list-group-flush">
+            {Object.keys(assignments).filter(x => !assignments[x].deleted).map(id => 
+              <Assignment key={id} assignment={assignments[id]} mark={mark} />
+            )}
+          </div>
+        </div>
+
+        {Object.keys(assignments).filter(x => assignments[x].deleted).length > 0 && (<>
+          <div className="card mt-5">
+            <div className="card-header">
+              <button onClick={e => setShowDeleted(d => !d)} className="btn btn-link p-0 text-dark text-left btn-block">
+                { showDeleted ? <FoldUpIcon size={16} /> : <FoldDownIcon size={16} /> }
+                <span className="ml-2">
+                  {showDeleted ? 'Hide' : 'Show' } deleted assignments
+                </span>
+              </button>
+            </div>
+            {showDeleted && (
+              <div className="list-group list-group-flush">
+                {Object.keys(assignments).filter(x => assignments[x].deleted).map(id => 
+                  <Assignment key={id} assignment={assignments[id]} mark={mark} />
+                )}
+              </div>
+            )}
+          </div>
+        </>)}
+
+        <footer>
+          <p className="text-center text-muted pt-4 mt-4 border-top" style={{ width: '50em', margin: '0 auto' }}>
+            Easel (get it? becuase of canvas??) gets tasks from Canvas LMS
+            using GraphQL, and uses Firestore to save the "done" and "deleted"
+            states. Created for and by Ori Marash, please don't hack this,
+            thanks :)
+          </p>
+        </footer>
       </div>
     </>
   )
